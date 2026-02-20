@@ -1,9 +1,7 @@
-# Musik 
-## 1
-![1](docs/p.jpeg)
+<h1>Musik</h1>
 
-### 2
-![2](docs/h.jpeg)
-
-### 3
-![3](docs/s.jpeg)
+<p align="center">
+  <img src="docs/p.jpeg" width="200"/>
+  <img src="docs/h.jpeg" width="200"/>
+  <img src="docs/s.jpeg" width="200"/>
+</p>
