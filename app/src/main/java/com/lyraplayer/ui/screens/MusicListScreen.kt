@@ -34,6 +34,11 @@ import androidx.compose.animation.shrinkVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.core.tween
+import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Folder
+import androidx.compose.material.icons.filled.Repeat
+import androidx.compose.material.icons.filled.RepeatOne
+import androidx.compose.material.icons.filled.Settings
 
 fun formatDuration(ms: Long): String {
     val totalSeconds = ms / 1000
@@ -50,6 +55,9 @@ fun MusicListScreen(
     searchQuery: String,
     onSearchChange: (String) -> Unit,
     onSortChange: (MusicViewModel.SortOption) -> Unit,
+    playbackMode: MusicViewModel.PlaybackMode,           // ✅ tambah
+    onPlaybackModeChange: (MusicViewModel.PlaybackMode) -> Unit, // ✅ tambah
+    onOpenSettings: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     var expanded by remember { mutableStateOf(false) }
@@ -69,23 +77,89 @@ fun MusicListScreen(
     ) {
 
         // ── TOP HEADER ──────────────────────────────────────────────
-        Column(
+        // Ganti bagian TOP HEADER dari Column menjadi:
+        Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 20.dp)
-                .padding(top = 16.dp, bottom = 8.dp)
+                .padding(top = 16.dp, bottom = 8.dp),
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            Text(
-                text = "My Library",
-                style = MaterialTheme.typography.headlineMedium,
-                fontWeight = FontWeight.Bold,
-                color = onSurfaceColor
-            )
-            Text(
-                text = "${songs.size} songs",
-                style = MaterialTheme.typography.bodyMedium,
-                color = onSurfaceVariantColor
-            )
+
+            // 🔹 Kiri: Title
+            Column(
+                modifier = Modifier.weight(1f)
+            ) {
+                Text(
+                    text = "My Library",
+                    style = MaterialTheme.typography.headlineMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = onSurfaceColor
+                )
+                Text(
+                    text = "${songs.size} songs",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = onSurfaceVariantColor
+                )
+            }
+
+            // 🔹 Kanan: Playback + Settings
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+
+                val isActive = playbackMode != MusicViewModel.PlaybackMode.OFF
+
+                IconButton(
+                    onClick = {
+                        onPlaybackModeChange(
+                            when (playbackMode) {
+                                MusicViewModel.PlaybackMode.OFF -> MusicViewModel.PlaybackMode.AUTOPLAY_FOLDER
+                                MusicViewModel.PlaybackMode.AUTOPLAY_FOLDER -> MusicViewModel.PlaybackMode.REPEAT_ONE
+                                MusicViewModel.PlaybackMode.REPEAT_ONE -> MusicViewModel.PlaybackMode.OFF
+                            }
+                        )
+                    },
+                    modifier = Modifier
+                        .size(44.dp)
+                        .clip(CircleShape)
+                        .background(
+                            if (isActive)
+                                MaterialTheme.colorScheme.primary.copy(alpha = 0.2f)
+                            else
+                                MaterialTheme.colorScheme.surfaceVariant
+                        )
+                ) {
+                    Icon(
+                        imageVector = when (playbackMode) {
+                            MusicViewModel.PlaybackMode.OFF -> Icons.Default.Repeat
+                            MusicViewModel.PlaybackMode.AUTOPLAY_FOLDER -> Icons.Default.Folder
+                            MusicViewModel.PlaybackMode.REPEAT_ONE -> Icons.Default.RepeatOne
+                        },
+                        contentDescription = "Playback Mode",
+                        tint = if (isActive)
+                            MaterialTheme.colorScheme.primary
+                        else
+                            MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.size(22.dp)
+                    )
+                }
+
+                IconButton(
+                    onClick = onOpenSettings,
+                    modifier = Modifier
+                        .size(44.dp)
+                        .clip(CircleShape)
+                        .background(MaterialTheme.colorScheme.surfaceVariant)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Settings,
+                        contentDescription = "Settings",
+                        tint = MaterialTheme.colorScheme.onSurface
+                    )
+                }
+            }
         }
 
         // ── SEARCH BAR ──────────────────────────────────────────────

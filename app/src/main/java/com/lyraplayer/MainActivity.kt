@@ -18,6 +18,7 @@ import androidx.compose.ui.Modifier
 import com.lyraplayer.ui.components.MiniPlayer
 import com.lyraplayer.ui.screens.MusicListScreen
 import com.lyraplayer.ui.screens.PlayerScreen
+import com.lyraplayer.ui.screens.SettingsScreen
 import com.lyraplayer.ui.theme.LyraPlayerTheme
 import com.lyraplayer.ui.viewmodel.MusicViewModel
 
@@ -47,16 +48,15 @@ class MainActivity : ComponentActivity() {
                 val duration by viewModel.duration.collectAsState()
                 val lyrics by viewModel.lyrics.collectAsState()
                 val currentLyricIndex by viewModel.currentLyricIndex.collectAsState()
+                val playbackMode by viewModel.playbackMode.collectAsState()
 
                 var showPlayer by remember { mutableStateOf(false) }
+                var showSettings by remember { mutableStateOf(false) }
 
                 Scaffold(
-                    contentWindowInsets = if (showPlayer)
-                        WindowInsets.safeDrawing
-                    else
-                        WindowInsets(0),
+                    contentWindowInsets = WindowInsets(0),
                     bottomBar = {
-                        if (!showPlayer) {
+                        if (!showPlayer && !showSettings) {
                             currentSong?.let { song ->
                                 MiniPlayer(
                                     song = song,
@@ -72,45 +72,10 @@ class MainActivity : ComponentActivity() {
                     }
                 ) { innerPadding ->
 
-                    val song = currentSong
-
-                    AnimatedContent(
-                        targetState = showPlayer && song != null,
-                        transitionSpec = {
-                            if (targetState) {
-                                // Buka PlayerScreen: slide up dari bawah
-                                slideInVertically(
-                                    initialOffsetY = { it },
-                                    animationSpec = tween(420)
-                                ) + fadeIn(
-                                    animationSpec = tween(300)
-                                ) togetherWith slideOutVertically(
-                                    targetOffsetY = { -it / 6 },
-                                    animationSpec = tween(420)
-                                ) + fadeOut(
-                                    animationSpec = tween(200)
-                                )
-                            } else {
-                                // Kembali ke MusicList: slide down ke bawah
-                                slideInVertically(
-                                    initialOffsetY = { -it / 6 },
-                                    animationSpec = tween(420)
-                                ) + fadeIn(
-                                    animationSpec = tween(300)
-                                ) togetherWith slideOutVertically(
-                                    targetOffsetY = { it },
-                                    animationSpec = tween(420)
-                                ) + fadeOut(
-                                    animationSpec = tween(200)
-                                )
-                            }
-                        },
-                        label = "playerTransition"
-                    ) { isShowingPlayer ->
-
-                        if (isShowingPlayer && song != null) {
+                    when {
+                        showPlayer && currentSong != null -> {
                             PlayerScreen(
-                                song = song,
+                                song = currentSong!!,
                                 lyrics = lyrics,
                                 currentLyricIndex = currentLyricIndex,
                                 currentPosition = currentPosition,
@@ -119,12 +84,19 @@ class MainActivity : ComponentActivity() {
                                 onPlayPause = { viewModel.togglePlayPause() },
                                 onSeek = { viewModel.seekTo(it) },
                                 onBack = { showPlayer = false },
-                                onLrcSelected = { inputStream ->
-                                    viewModel.loadLrc(inputStream)
-                                },
-                                modifier = Modifier
+                                onLrcSelected = { viewModel.loadLrc(it) },
+                                playbackMode = playbackMode,
+                                onPlaybackModeChange = { viewModel.setPlaybackMode(it) }
                             )
-                        } else {
+                        }
+
+                        showSettings -> {
+                            SettingsScreen(
+                                onBack = { showSettings = false }
+                            )
+                        }
+
+                        else -> {
                             MusicListScreen(
                                 songs = songs,
                                 searchQuery = searchQuery,
@@ -133,6 +105,9 @@ class MainActivity : ComponentActivity() {
                                 onSongClick = { selectedSong ->
                                     viewModel.playSong(selectedSong)
                                 },
+                                playbackMode = playbackMode,
+                                onPlaybackModeChange = { viewModel.setPlaybackMode(it) },
+                                onOpenSettings = { showSettings = true },
                                 modifier = Modifier.padding(innerPadding)
                             )
                         }

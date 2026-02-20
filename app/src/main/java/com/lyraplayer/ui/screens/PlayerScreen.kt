@@ -48,6 +48,7 @@ import androidx.core.view.WindowInsetsControllerCompat
 import com.lyraplayer.data.LyricLine
 import com.lyraplayer.data.Song
 import com.lyraplayer.ui.components.LyricView
+import com.lyraplayer.ui.viewmodel.MusicViewModel
 import java.io.InputStream
 
 @Composable
@@ -79,7 +80,9 @@ fun PlayerScreen(
     onPlayPause: () -> Unit,
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
-    onLrcSelected: (InputStream) -> Unit
+    onLrcSelected: (InputStream) -> Unit,
+    playbackMode: MusicViewModel.PlaybackMode,
+    onPlaybackModeChange: (MusicViewModel.PlaybackMode) -> Unit
 ) {
     val context = LocalContext.current
     val activity = context as? Activity

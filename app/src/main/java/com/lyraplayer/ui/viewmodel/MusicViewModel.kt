@@ -84,6 +84,10 @@ class MusicViewModel(application: Application) : AndroidViewModel(application) {
     init {
         loadSongs()
 
+        playerManager.setOnSongCompleteListener {
+            handleSongCompletion()
+        }
+
         // Update progress only when playing
         viewModelScope.launch {
             while (true) {
@@ -93,6 +97,8 @@ class MusicViewModel(application: Application) : AndroidViewModel(application) {
             }
         }
     }
+
+
 
     // 🔎 SEARCH UPDATE
     fun updateSearch(query: String) {
@@ -150,5 +156,45 @@ class MusicViewModel(application: Application) : AndroidViewModel(application) {
     override fun onCleared() {
         super.onCleared()
         playerManager.release()
+    }
+
+    enum class PlaybackMode {
+        OFF,
+        AUTOPLAY_FOLDER,
+        REPEAT_ONE
+    }
+
+    private val _playbackMode = MutableStateFlow(PlaybackMode.OFF)
+    val playbackMode: StateFlow<PlaybackMode> = _playbackMode
+
+    fun setPlaybackMode(mode: PlaybackMode) {
+        _playbackMode.value = mode
+    }
+
+    private fun handleSongCompletion() {
+        viewModelScope.launch { // ✅ pastikan jalan di coroutine
+            val current = _currentSong.value ?: return@launch
+            val mode = _playbackMode.value
+
+            when (mode) {
+                PlaybackMode.OFF -> { }
+
+                PlaybackMode.REPEAT_ONE -> {
+                    playSong(current)
+                }
+
+                PlaybackMode.AUTOPLAY_FOLDER -> {
+                    val allSongs = _songs.value
+                    val currentFolder = current.path.substringBeforeLast("/")
+                    val sameFolderSongs = allSongs.filter {
+                        it.path.substringBeforeLast("/") == currentFolder // ✅ exact match, bukan startsWith
+                    }
+                    val currentIndex = sameFolderSongs.indexOfFirst { it.id == current.id }
+                    if (currentIndex != -1 && currentIndex < sameFolderSongs.lastIndex) {
+                        playSong(sameFolderSongs[currentIndex + 1])
+                    }
+                }
+            }
+        }
     }
 }

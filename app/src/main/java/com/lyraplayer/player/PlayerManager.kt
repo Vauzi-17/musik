@@ -17,10 +17,12 @@ class PlayerManager(context: Context) {
 
     private val appContext = context.applicationContext
 
-    private val exoPlayer = ExoPlayer.Builder(context)
+    private val exoPlayer = ExoPlayer.Builder(appContext)
         .setRenderersFactory(
-            DefaultRenderersFactory(context).apply {
-                setExtensionRendererMode(DefaultRenderersFactory.EXTENSION_RENDERER_MODE_PREFER)
+            DefaultRenderersFactory(appContext).apply {
+                setExtensionRendererMode(
+                    DefaultRenderersFactory.EXTENSION_RENDERER_MODE_PREFER
+                )
             }
         )
         .build()
@@ -29,21 +31,26 @@ class PlayerManager(context: Context) {
     private var usingFallback = false
     private var currentUri: String = ""
 
+    private var onSongComplete: (() -> Unit)? = null
+
     private val _isPlaying = MutableStateFlow(false)
     val isPlaying: StateFlow<Boolean> = _isPlaying
 
     init {
         exoPlayer.addListener(object : Player.Listener {
+
             override fun onPlaybackStateChanged(state: Int) {
+
                 if (state == Player.STATE_READY) {
                     _isPlaying.value = exoPlayer.isPlaying
                 }
+
                 if (state == Player.STATE_ENDED) {
                     _isPlaying.value = false
+                    onSongComplete?.invoke()
                 }
             }
 
-            // ✅ Jika ExoPlayer gagal, fallback ke MediaPlayer
             override fun onPlayerError(error: PlaybackException) {
                 _isPlaying.value = false
                 playWithMediaPlayer(currentUri)
@@ -55,8 +62,6 @@ class PlayerManager(context: Context) {
         currentUri = uri
         usingFallback = false
 
-        // Hentikan MediaPlayer fallback jika aktif
-        mediaPlayer?.stop()
         mediaPlayer?.release()
         mediaPlayer = null
 
@@ -64,25 +69,33 @@ class PlayerManager(context: Context) {
         exoPlayer.setMediaItem(mediaItem)
         exoPlayer.prepare()
         exoPlayer.play()
+
         _isPlaying.value = true
     }
 
-    // ✅ Fallback ke MediaPlayer saat ExoPlayer error
     private fun playWithMediaPlayer(uri: String) {
         usingFallback = true
+
         try {
             mediaPlayer?.release()
             mediaPlayer = MediaPlayer().apply {
                 setDataSource(appContext, Uri.parse(uri))
                 prepare()
                 start()
-                setOnCompletionListener { _isPlaying.value = false }
+
+                setOnCompletionListener {
+                    _isPlaying.value = false
+                    onSongComplete?.invoke()
+                }
+
                 setOnErrorListener { _, _, _ ->
                     _isPlaying.value = false
                     true
                 }
             }
+
             _isPlaying.value = true
+
         } catch (e: Exception) {
             _isPlaying.value = false
         }
@@ -128,6 +141,10 @@ class PlayerManager(context: Context) {
         } else {
             exoPlayer.duration.coerceAtLeast(0L)
         }
+    }
+
+    fun setOnSongCompleteListener(listener: () -> Unit) {
+        onSongComplete = listener
     }
 
     fun release() {
